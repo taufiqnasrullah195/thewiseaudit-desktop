@@ -4,4 +4,5 @@ import sys
 import pytest
 
 if __name__ == "__main__":
-    sys.exit(pytest.main(["-q", "test_fleet_core.py", "test_fleet_multi.py"]))
+    sys.exit(pytest.main(["-q", "test_fleet_core.py", "test_fleet_multi.py",
+                          "test_fleet_store.py"]))

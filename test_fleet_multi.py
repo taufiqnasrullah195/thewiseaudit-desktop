@@ -70,6 +70,25 @@ def test_scan_fleet_gateway_when_reachable():
     assert len(results) == 1
 
 
+def test_scan_fleet_progress_callback():
+    events = []
+    results, _ = fm.scan_fleet(["127.0.0.1", "192.0.2.123", "127.0.0.2"],
+                               progress_cb=lambda d, t, h, s: events.append(
+                                   (d, t, h, s)))
+    assert len(events) == 3
+    assert [e[0] for e in events] == [1, 2, 3]  # monotonic
+    assert all(e[1] == 3 for e in events)
+    assert len(results) == 3
+
+
+def test_scan_fleet_progress_cb_exception_swallowed():
+    # A broken callback must not kill the batch.
+    def boom(d, t, h, s):
+        raise RuntimeError("cb broke")
+    results, _ = fm.scan_fleet(["127.0.0.1"], progress_cb=boom)
+    assert results[0].status == "up"
+
+
 def test_fleet_csv_roundtrip():
     r1 = fm.HostResult("h1", "up", 3, ["RDP"], ["SMB"])
     r2 = fm.HostResult("h2", "down", None, [], ["RDP"])

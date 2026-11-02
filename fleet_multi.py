@@ -119,17 +119,31 @@ def scan_host(host: str) -> HostResult:
     return res
 
 
-def scan_fleet(hosts: list[str], max_workers: int = 16
+def scan_fleet(hosts: list[str], max_workers: int = 16,
+               progress_cb=None
                ) -> tuple[list[HostResult], str]:
-    """Batch scan. Order of results follows input order (futures map)."""
+    """Batch scan. Order of results follows input order (futures map).
+
+    progress_cb(done_count, total, host, status) is called from worker
+    threads after each host completes — keep it cheap/thread-safe (the GUI
+    passes a queue-putting closure).
+    """
     started = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     results: dict[str, HostResult] = {}
+    done = 0
+    total = len(hosts)
     with ThreadPoolExecutor(max_workers=min(max_workers, max(1, len(hosts))
                                            ) or 1) as pool:
         futures = {pool.submit(scan_host, h): h for h in hosts}
         for fut in as_completed(futures):
             r = fut.result()
             results[r.host] = r
+            done += 1
+            if progress_cb:
+                try:
+                    progress_cb(done, total, r.host, r.status)
+                except Exception:  # noqa: BLE001 — progress must not kill scans
+                    pass
     ordered = [results[h] for h in hosts if h in results]
     return ordered, started
 

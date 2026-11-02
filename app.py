@@ -19,6 +19,7 @@ from tkinter import filedialog, ttk
 
 import fleet_core
 import fleet_multi
+import fleet_store
 from fleet_core import AuditResult
 
 COL_OK = "#2E6E3E"   # deep green, readable on paper
@@ -206,6 +207,25 @@ class FleetAuditApp(tk.Tk):
         self._fleet_results: list[fleet_multi.HostResult] = []
         self._fleet_started = ""
 
+        # --- History tab: persisted scan runs from SQLite ---
+        history_frame = ttk.Frame(nb, padding=12)
+        nb.add(history_frame, text="History")
+        hbtns = ttk.Frame(history_frame)
+        hbtns.pack(fill="x")
+        ttk.Button(hbtns, text="Refresh",
+                   command=self._refresh_history).pack(side="left")
+        ttk.Button(hbtns, text="Delete selected",
+                   command=self._delete_selected_run).pack(side="left",
+                                                           padx=(10, 0))
+        ttk.Button(hbtns, text="Export history CSV…",
+                   command=self._export_history_csv).pack(side="left",
+                                                          padx=(10, 0))
+        self._tab_history = self._tree(
+            history_frame, ("ID", "Scanned", "Hostname", "Worst",
+                            "CPU %", "RAM %", "Uptime d"), height=12)
+        self._tab_history.pack(fill="both", expand=True, pady=(8, 0))
+        self._refresh_history()
+
         self._footer = ttk.Label(
             self, padding=(16, 0, 16, 10), style="Faint.TLabel",
             font=("Segoe UI", 9),
@@ -249,6 +269,11 @@ class FleetAuditApp(tk.Tk):
                 if isinstance(item, AuditResult):
                     self._latest = item
                     self._render(item)
+                elif item[0] == "fleet_progress":
+                    _, done, total, host, status = item
+                    self._fleet_status.set(
+                        f"Scanning… {done}/{total} hosts "
+                        f"({host} {status})")
                 else:  # ("fleet", results, started)
                     _, results, started = item
                     self._render_fleet(results, started)
@@ -262,7 +287,6 @@ class FleetAuditApp(tk.Tk):
         for tv in (self._tab_overview, self._tab_findings, self._tab_storage,
                    self._tab_net, self._tab_procs):
             tv.delete(*tv.get_children())
-
         s = res.system
         for k, v in (("Hostname", s.get("hostname")),
                      ("OS", s.get("os")),
@@ -315,6 +339,15 @@ class FleetAuditApp(tk.Tk):
         n_warn = sum(1 for f in res.findings if f.severity == "WARNING")
         n_crit = sum(1 for f in res.findings if f.severity == "CRITICAL")
         extra = f" · {len(res.errors)} probe errors" if res.errors else ""
+        # Persist + diff before refreshing history.
+        try:
+            diffs = fleet_store.diff_vs_prev(res)
+            fleet_store.save_audit(res)
+            self._refresh_history()
+        except Exception as exc:  # noqa: BLE001 — persistence is best-effort
+            diffs = [f"history save failed: {exc.__class__.__name__}"]
+        if diffs:
+            extra += " · " + " | ".join(diffs[:3])
         self._status.set(
             f"Done · worst: {res.worst_severity} · "
             f"{n_crit} critical / {n_warn} warning{extra}")
@@ -365,8 +398,11 @@ class FleetAuditApp(tk.Tk):
         self._fleet_worker.start()
 
     def _worker_fleet(self, hosts: list[str]) -> None:
+        def report(done: int, total: int, host: str, status: str) -> None:
+            self._q.put(("fleet_progress", done, total, host, status))
         try:
-            results, started = fleet_multi.scan_fleet(hosts)
+            results, started = fleet_multi.scan_fleet(hosts,
+                                                      progress_cb=report)
             self._q.put(("fleet", results, started))
         except Exception as exc:  # noqa: BLE001
             self._q.put(("fleet", [], f"fleet scan crashed: {exc!r}"))
@@ -382,6 +418,10 @@ class FleetAuditApp(tk.Tk):
         n_up = sum(1 for r in results if r.status == "up")
         self._fleet_status.set(
             f"{n_up}/{len(results)} up · scanned {started}")
+        try:
+            fleet_store.save_fleet(results)
+        except Exception:  # noqa: BLE001 — persistence is best-effort
+            pass
 
     def _export_fleet_csv(self) -> None:
         if not self._fleet_results:
@@ -396,6 +436,39 @@ class FleetAuditApp(tk.Tk):
             fh.write(fleet_multi.fleet_to_csv(self._fleet_results,
                                               self._fleet_started))
         self._fleet_status.set(f"CSV written → {path}")
+
+    # ---------- history ----------
+
+    def _refresh_history(self) -> None:
+        try:
+            runs = fleet_store.last_runs(50)
+        except Exception:  # noqa: BLE001 — history must never block startup
+            return
+        self._tab_history.delete(*self._tab_history.get_children())
+        for r in runs:
+            self._tab_history.insert("", "end", values=(
+                r["id"], r["scanned_at"], r["hostname"],
+                r["worst_severity"], r["cpu_percent"],
+                r["ram_percent"], r["uptime_days"]))
+
+    def _delete_selected_run(self) -> None:
+        sel = self._tab_history.selection()
+        if not sel:
+            self._status.set("Select a row in History first.")
+            return
+        run_id = int(self._tab_history.item(sel[0], "values")[0])
+        fleet_store.delete_run(run_id)
+        self._refresh_history()
+
+    def _export_history_csv(self) -> None:
+        path = filedialog.asksaveasfilename(
+            defaultextension=".csv", initialfile="fleetaudit_history.csv",
+            filetypes=[("CSV", "*.csv")])
+        if not path:
+            return
+        with open(path, "w", encoding="utf-8", newline="") as fh:
+            fh.write(fleet_store.history_to_csv())
+        self._status.set(f"History CSV written → {path}")
 
     def _on_close(self) -> None:
         self._closing = True
