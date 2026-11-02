@@ -83,3 +83,70 @@ def test_fleet_csv_roundtrip():
 def test_ipaddress_sanity_of_defaults():
     for port, name in fm.PROBE_PORTS:
         assert 0 < port < 65536 and name
+
+
+# ---------- ping output parsing (cross-platform samples) ----------
+
+def _parse_ping_text(monkeypatch, sample: str):
+    """Run the shared parsing logic against a canned ping output."""
+    class FakeRun:
+        def __init__(self, stdout: str):
+            self.stdout = stdout
+    monkeypatch.setattr(fm.subprocess, "run",
+                        lambda cmd, **kw: FakeRun(sample))
+    return fm.ping_host("whatever")
+
+
+def test_parse_linux_ping_success(monkeypatch):
+    sample = (
+        "PING 10.0.0.1 (10.0.0.1) 56(84) bytes of data.\n"
+        "64 bytes from 10.0.0.1: icmp_seq=1 ttl=64 time=0.512 ms\n"
+        "64 bytes from 10.0.0.1: icmp_seq=2 ttl=64 time=0.428 ms\n"
+        "\n--- 10.0.0.1 ping statistics ---\n"
+        "2 packets transmitted, 2 received, 0% packet loss, time 1001ms\n"
+    )
+    up, latency = _parse_ping_text(monkeypatch, sample)
+    assert up is True
+    assert latency == 0  # 0.512 ms rounds to 0
+
+
+def test_parse_linux_ping_decimal_latency(monkeypatch):
+    sample = (
+        "64 bytes from 10.0.0.9: icmp_seq=1 ttl=63 time=12.7 ms\n"
+        "--- ping statistics ---\n"
+        "1 packets transmitted, 1 received, 0% packet loss\n"
+    )
+    up, latency = _parse_ping_text(monkeypatch, sample)
+    assert up is True and latency == 12
+
+
+def test_parse_english_windows_ping(monkeypatch):
+    sample = (
+        "Pinging 10.0.0.1 with 32 bytes of data:\n"
+        "Reply from 10.0.0.1: bytes=32 time=3ms TTL=64\n"
+        "Reply from 10.0.0.1: bytes=32 time=2ms TTL=64\n"
+        "\nPing statistics for 10.0.0.1:\n"
+        "    Packets: Sent = 2, Received = 2, Lost = 0 (0% loss),\n"
+    )
+    up, latency = _parse_ping_text(monkeypatch, sample)
+    assert up is True and latency == 3
+
+
+def test_parse_german_windows_ping(monkeypatch):
+    sample = (
+        "Antwort von 10.0.0.1: Bytes=32 Zeit=3ms TTL=64\n"
+        "Ping-Statistik fr 10.0.0.1:\n"
+        "    Pakete: Gesendet = 2, Empfangen = 2, Verloren = 0,\n"
+    )
+    up, _ = _parse_ping_text(monkeypatch, sample)
+    assert up is True
+
+
+def test_parse_indonesian_windows_ping_unreachable(monkeypatch):
+    # No TTL in body, Received = 0 in summary -> down.
+    sample = (
+        "Ping statistik untuk 192.0.2.123:\n"
+        "    Paket: Terkirim = 2, Diterima = 0, Hilang = 2 (100% loss),\n"
+    )
+    up, latency = _parse_ping_text(monkeypatch, sample)
+    assert up is False and latency is None

@@ -35,10 +35,8 @@ PROBE_PORTS: list[tuple[int, str]] = [
 ]
 CONNECT_TIMEOUT_S = 0.6
 
-# Windows localizes ping output, so parse the *summary* lines instead:
-# English "Received = 3", German "Empfangen = 3", Indonesian "Diterima = 3".
-# The " = <n>" pattern after a Received-like token is stable across locales.
-_REPLY_RE = re.compile(r"=\s*(\d+)")
+# Windows localizes ping output, so reachability is keyed on TTL presence
+# (invariant across locales) rather than any localized word.
 _TTL_RE = re.compile(r"[tT][tT][lL][^\d]*(\d+)")
 
 
@@ -84,16 +82,16 @@ def ping_host(host: str) -> tuple[bool, int | None]:
                              timeout=8, errors="replace").stdout
     except (subprocess.TimeoutExpired, OSError):
         return False, None
-    # Summary always contains pairs like "Sent = 2" / "Received = 0".
-    nums = [int(m) for m in _REPLY_RE.findall(out.splitlines()[-3:].__str__())
-            ] or [int(m) for m in _REPLY_RE.findall(out)]
-    # Fallback: any "TTL=" in body means at least one reply arrived.
+    # Locale-tolerant reachability, keyed on the one true invariant:
+    # a successful reply line ALWAYS carries TTL (Windows "TTL=64", Linux
+    # "ttl=64"), in every locale. Failure lines — "Request timed out",
+    # "Destination net unreachable" (which Windows *counts* as Received=2
+    # when an ISP or gateway answers from a different IP!) — never do.
+    # So: TTL in body -> up; anything else -> down. No stats parsing.
     if _TTL_RE.search(out):
-        # Best-effort latency: first "time[= ]Xms" occurrence.
-        m = re.search(r"[tT]ime[<=> ]*(\d+)\s*ms", out)
-        return True, int(m.group(1)) if m else 0
-    if len(nums) >= 2 and nums[-1] > 0:
-        return True, None
+        # Best-effort latency: first "time=12ms" / "time=0.5 ms" occurrence.
+        m = re.search(r"[tT]ime[<=> ]*([\d.]+)\s*ms", out)
+        return True, int(float(m.group(1))) if m else 0
     return False, None
 
 
