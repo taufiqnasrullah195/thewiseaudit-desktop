@@ -3,3 +3,7 @@ __pycache__/
 *.bak
 .env
 build/ dist/ *.spec
+demo_*.py
+screenshot_app.py
+shot_*.png
+assets/icon_work*
