@@ -21,8 +21,18 @@ import fleet_core
 import fleet_multi
 from fleet_core import AuditResult
 
-COL_OK, COL_WARN, COL_CRIT, COL_INFO = "#2e7d32", "#ef6c00", "#c62828", "#1565c0"
+COL_OK, COL_WARN, COL_CRIT, COL_INFO = "#4caf50", "#ff9800", "#ef5350", "#42a5f5"
 
+# Dark palette — one source of truth for the whole UI.
+BG = "#16181d"          # window background
+BG_PANEL = "#1e2128"    # cards / tables
+BG_ROW_ALT = "#232732"  # zebra stripe
+BG_INPUT = "#262a33"
+FG = "#e8eaf0"          # primary text
+FG_SOFT = "#9aa3b2"     # secondary text
+FG_FAINT = "#6b7381"
+ACCENT = "#7c9cff"      # brand blue-violet
+LINE = "#2e3340"        # separators / borders
 SEV_TAG = {"OK": "ok", "INFO": "info", "WARNING": "warn", "CRITICAL": "crit"}
 
 
@@ -30,8 +40,9 @@ class FleetAuditApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("FleetAudit — PC health & inventory")
-        self.geometry("980x680")
-        self.minsize(820, 560)
+        self.geometry("1000x700")
+        self.minsize(840, 580)
+        self.configure(bg=BG)
 
         self._q: queue.Queue = queue.Queue()
         self._worker: threading.Thread | None = None
@@ -47,28 +58,77 @@ class FleetAuditApp(tk.Tk):
 
     def _build_style(self) -> None:
         style = ttk.Style(self)
-        try:
-            style.theme_use("vista")
-        except tk.TclError:
-            style.theme_use("clam")
+        style.theme_use("clam")  # fully themeable; vista is not
         self.option_add("*Font", ("Segoe UI", 10))
-        style.configure("Treeview", rowheight=24)
-        style.configure("TButton", padding=(14, 6))
-        style.configure("Scan.TButton", font=("Segoe UI", 10, "bold"))
+
+        style.configure(".", background=BG, foreground=FG,
+                        bordercolor=LINE, troughcolor=BG_PANEL)
+        style.configure("TFrame", background=BG)
+        style.configure("Panel.TFrame", background=BG_PANEL)
+        style.configure("TLabel", background=BG, foreground=FG)
+        style.configure("Soft.TLabel", background=BG, foreground=FG_SOFT)
+        style.configure("Faint.TLabel", background=BG, foreground=FG_FAINT)
+        style.configure("Status.TLabel", background=BG, foreground=FG_SOFT)
+
+        # Flat accent buttons: filled primary, quiet secondary.
+        style.configure("TButton", background=BG_INPUT, foreground=FG,
+                        borderwidth=0, focusthickness=1,
+                        focuscolor=ACCENT, padding=(14, 7))
+        style.map("TButton",
+                  background=[("active", "#333845"),
+                              ("pressed", "#2c313c")])
+        style.configure("Scan.TButton", background=ACCENT, foreground="#0f1116",
+                        font=("Segoe UI", 10, "bold"), padding=(18, 7))
+        style.map("Scan.TButton",
+                  background=[("active", "#93adff"), ("pressed", "#6a89e8")])
+
+        # Notebook: dark tabs, accent underline on the active one.
+        style.configure("TNotebook", background=BG, borderwidth=0)
+        style.configure("TNotebook.Tab", background=BG_PANEL, foreground=FG_SOFT,
+                        padding=(16, 8), borderwidth=0, font=("Segoe UI", 10))
+        style.map("TNotebook.Tab",
+                  background=[("selected", BG_PANEL)],
+                  foreground=[("selected", FG)],
+                  expand=[("selected", (1, 1, 1, 0))])
+
+        # Treeviews: dark body, zebra stripes, no borders.
+        style.configure("Treeview", background=BG_PANEL, foreground=FG,
+                        fieldbackground=BG_PANEL, rowheight=26,
+                        borderwidth=0, bordercolor=LINE)
+        style.configure("Treeview.Heading",
+                        background="#2a2f3a", foreground=FG_SOFT,
+                        borderwidth=0, padding=(8, 6),
+                        font=("Segoe UI", 9, "bold"))
+        style.map("Treeview",
+                  background=[("selected", "#31405f")],
+                  foreground=[("selected", "#ffffff")])
+        style.map("Treeview.Heading", background=[("active", "#323848")])
 
     def _build_ui(self) -> None:
-        top = ttk.Frame(self, padding=(12, 10, 12, 4))
-        top.pack(fill="x")
-        ttk.Button(top, text="Scan now", style="Scan.TButton",
-                   command=self.start_scan).pack(side="left")
-        ttk.Button(top, text="Export HTML…", command=self._export_html
-                   ).pack(side="left", padx=(10, 0))
-        ttk.Button(top, text="Export CSV…", command=self._export_csv
-                   ).pack(side="left")
+        # Header: wordmark + tagline + primary actions.
+        header = ttk.Frame(self, padding=(16, 12, 16, 6))
+        header.pack(fill="x")
+        left = ttk.Frame(header)
+        left.pack(side="left")
+        ttk.Label(left, text="FleetAudit", foreground=ACCENT,
+                  font=("Segoe UI", 16, "bold")).pack(anchor="w")
+        ttk.Label(left, text="PC health & inventory · fleet scanner",
+                  style="Faint.TLabel",
+                  font=("Segoe UI", 9)).pack(anchor="w")
+        actions = ttk.Frame(header)
+        actions.pack(side="right")
         self._status = tk.StringVar(
             value="Ready — hit Scan now to audit this machine.")
-        ttk.Label(top, textvariable=self._status, anchor="e"
-                  ).pack(side="right", fill="x", expand=True)
+        ttk.Label(actions, textvariable=self._status, style="Status.TLabel"
+                  ).pack(anchor="e", pady=(0, 6))
+        btnrow = ttk.Frame(actions)
+        btnrow.pack()
+        ttk.Button(btnrow, text="Export HTML…", command=self._export_html
+                   ).pack(side="right", padx=(8, 0))
+        ttk.Button(btnrow, text="Export CSV…", command=self._export_csv
+                   ).pack(side="right")
+        ttk.Button(btnrow, text="Scan now  ▶", style="Scan.TButton",
+                   command=self.start_scan).pack(side="right", padx=(0, 8))
 
         nb = ttk.Notebook(self)
         nb.pack(fill="both", expand=True, padx=12, pady=(4, 6))
@@ -93,18 +153,21 @@ class FleetAuditApp(tk.Tk):
         nb.add(self._tab_procs, text="Top processes")
 
         # --- Fleet tab: multi-host reachability & service probes ---
-        fleet_frame = ttk.Frame(nb, padding=10)
+        fleet_frame = ttk.Frame(nb, padding=12)
         nb.add(fleet_frame, text="Fleet (multi-host)")
         ttk.Label(
-            fleet_frame,
+            fleet_frame, style="Soft.TLabel",
             text="Hosts — one per line or CSV first column (IP or hostname):"
         ).pack(anchor="w")
-        self._hosts_text = tk.Text(fleet_frame, height=6, width=70,
-                                   font=("Consolas", 10), undo=True)
+        self._hosts_text = tk.Text(
+            fleet_frame, height=6, width=70, undo=True,
+            font=("Consolas", 10), bg=BG_INPUT, fg=FG,
+            insertbackground=FG, relief="flat", padx=10, pady=8,
+            selectbackground="#31405f")
         self._hosts_text.pack(fill="x", pady=(4, 8))
         btns = ttk.Frame(fleet_frame)
         btns.pack(fill="x")
-        ttk.Button(btns, text="Scan fleet",
+        ttk.Button(btns, text="Scan fleet", style="Scan.TButton",
                    command=self.start_fleet_scan).pack(side="left")
         ttk.Button(btns, text="Export fleet CSV…",
                    command=self._export_fleet_csv).pack(side="left",
@@ -112,7 +175,7 @@ class FleetAuditApp(tk.Tk):
         self._fleet_status = tk.StringVar(
             value="Probe ports: " + ", ".join(
                 f"{n} ({p})" for p, n in fleet_multi.PROBE_PORTS))
-        ttk.Label(btns, textvariable=self._fleet_status
+        ttk.Label(btns, textvariable=self._fleet_status, style="Status.TLabel"
                   ).pack(side="right")
         self._tab_fleet = self._tree(
             fleet_frame, ("Host", "Status", "Latency ms",
@@ -125,8 +188,9 @@ class FleetAuditApp(tk.Tk):
         self._fleet_started = ""
 
         self._footer = ttk.Label(
-            self, padding=(12, 0, 12, 8),
-            text="FleetAudit v1.0 · thresholds: "
+            self, padding=(16, 0, 16, 10), style="Faint.TLabel",
+            font=("Segoe UI", 9),
+            text="FleetAudit v1.1 · thresholds: "
                  + ", ".join(f"{k}={v}" for k, v
                              in fleet_core.THRESHOLDS.items()))
         self._footer.pack(fill="x")
@@ -138,6 +202,8 @@ class FleetAuditApp(tk.Tk):
             tv.heading(c, text=c)
             tv.column(c, width=120 if not stretch else 380,
                       stretch=stretch)
+        # zebra stripes keep long tables scannable on the dark body
+        tv.tag_configure("odd", background=BG_ROW_ALT)
         return tv
 
     # ---------- scan lifecycle ----------
@@ -192,30 +258,40 @@ class FleetAuditApp(tk.Tk):
                               f"(uptime {s.get('uptime_days')} d)"),
                      ("Scanned", res.scanned_at)):
             if v is not None:
-                self._tab_overview.insert("", "end", values=(k, v))
+                row_i = len(self._tab_overview.get_children())
+                self._tab_overview.insert("", "end", values=(k, v),
+                                          tags=("odd",) if row_i % 2 else ())
 
         for f in res.findings:
             self._tab_findings.insert(
                 "", "end", values=f.as_row(), tags=(SEV_TAG[f.severity],))
 
         for p in res.storage:
+            row_i = len(self._tab_storage.get_children())
+            stripe = ("odd",) if row_i % 2 else ()
             if "error" in p:
                 self._tab_storage.insert("", "end",
                                          values=(p["mount"], p["fstype"],
-                                                 "—", "—", p["error"]))
+                                                 "—", "—", p["error"]),
+                                         tags=stripe)
             else:
                 self._tab_storage.insert(
                     "", "end",
                     values=(p["mount"], p["fstype"], p["total_gb"],
-                            p["free_gb"], p["free_percent"]))
+                            p["free_gb"], p["free_percent"]),
+                    tags=stripe)
 
         for i in res.network.get("interfaces", []):
+            row_i = len(self._tab_net.get_children())
             self._tab_net.insert("", "end", values=(
-                i["name"], i["ipv4"] or "—", i["state"], i["speed_mbit"]))
+                i["name"], i["ipv4"] or "—", i["state"], i["speed_mbit"]),
+                tags=("odd",) if row_i % 2 else ())
 
         for p in res.top_processes:
+            row_i = len(self._tab_procs.get_children())
             self._tab_procs.insert("", "end", values=(
-                p["pid"], p["name"], p["cpu_percent"], p["mem_percent"]))
+                p["pid"], p["name"], p["cpu_percent"], p["mem_percent"]),
+                tags=("odd",) if row_i % 2 else ())
 
         n_warn = sum(1 for f in res.findings if f.severity == "WARNING")
         n_crit = sum(1 for f in res.findings if f.severity == "CRITICAL")

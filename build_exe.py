@@ -1,0 +1,16 @@
+"""build_exe.py — drive the PyInstaller build for FleetAudit.exe."""
+import PyInstaller.__main__
+import sys
+
+PyInstaller.__main__.run([
+    "app.py",
+    "--name=FleetAudit",
+    "--onefile",
+    "--windowed",              # no console window behind the GUI
+    "--collect-submodules=psutil",
+    "--exclude-module=pytest",
+    "--exclude-module=PIL",
+    "--noconfirm",
+    "--clean",
+])
+print("BUILD OK")
