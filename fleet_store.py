@@ -2,7 +2,7 @@
 fleet_store.py — persistence layer: SQLite history for local audits and
 fleet scans, plus diff-against-previous-run.
 
-Storage lives in %LOCALAPPDATA%/FleetAudit/fleetaudit.db (created on first
+Storage lives in %LOCALAPPDATA%/TheWiseAudit/thewiseaudit.db (created on first
 use). All writes are parameterized; connection is per-call (SQLite handles
 concurrency via file locks — adequate for a single-user desktop tool).
 
@@ -27,9 +27,9 @@ def _db_path() -> str:
     if _DB_PATH_OVERRIDE:
         return _DB_PATH_OVERRIDE
     base = os.environ.get("LOCALAPPDATA") or tempfile.gettempdir()
-    folder = os.path.join(base, "FleetAudit")
+    folder = os.path.join(base, "TheWiseAudit")
     os.makedirs(folder, exist_ok=True)
-    return os.path.join(folder, "fleetaudit.db")
+    return os.path.join(folder, "thewiseaudit.db")
 
 
 def _connect() -> sqlite3.Connection:

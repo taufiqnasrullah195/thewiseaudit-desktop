@@ -1,4 +1,4 @@
-# FleetAudit Desktop
+# TheWiseAudit Desktop
 
 ![UI](docs/screenshot.png)
 
@@ -28,7 +28,7 @@ UI follows the same Editorial Light design language as
   and open/closed services land in one table with live progress
   (`Scanning… 3/10 hosts`), exportable to CSV
 - **History** — every scan is persisted to SQLite
-  (`%LOCALAPPDATA%/FleetAudit/fleetaudit.db`) and survives restarts; each
+  (`%LOCALAPPDATA%/TheWiseAudit/thewiseaudit.db`) and survives restarts; each
   new run diffs against the previous one and reports NEW / RESOLVED findings
 - **Export** — HTML report (styled, severity-colored) + CSV row
 - **Probe isolation** — a failing counter (e.g. unreadable disk) is recorded,
@@ -36,8 +36,8 @@ UI follows the same Editorial Light design language as
 
 ## Download
 
-Grab `FleetAudit.exe` from the latest
-[GitHub Release](https://github.com/taufiqnasrullah195/fleetaudit-desktop/releases)
+Grab `TheWiseAudit.exe` from the latest
+[GitHub Release](https://github.com/taufiqnasrullah195/thewiseaudit-desktop/releases)
 — a single file, runs on Windows 10/11 without Python installed.
 
 > First launch: Windows SmartScreen will warn once (unsigned binary).
@@ -57,7 +57,7 @@ Build the executable yourself:
 ```
 pip install pyinstaller psutil pillow
 python make_icon.py        # regenerates assets/icon.ico
-python build_exe.py        # → dist/FleetAudit.exe
+python build_exe.py        # → dist/TheWiseAudit.exe
 ```
 
 ## Layout

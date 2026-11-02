@@ -32,9 +32,9 @@ def _draw(size: int) -> Image.Image:
                         width=max(1, size // 16))
     # Serif monogram, centered.
     f = _font(size)
-    bbox = d.textbbox((0, 0), "FA", font=f)
+    bbox = d.textbbox((0, 0), "WA", font=f)
     w, h = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    d.text(((size - w) / 2 - bbox[0], (size - h) / 2 - bbox[1]), "FA",
+    d.text(((size - w) / 2 - bbox[0], (size - h) / 2 - bbox[1]), "WA",
            font=f, fill=INK)
     return img
 

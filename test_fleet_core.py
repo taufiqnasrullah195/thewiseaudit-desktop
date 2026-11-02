@@ -1,4 +1,4 @@
-"""test_fleet_core.py — FleetAudit core: thresholds, isolation, export shapes."""
+"""test_fleet_core.py — TheWiseAudit core: thresholds, isolation, export shapes."""
 import csv
 import io
 

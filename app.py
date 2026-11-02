@@ -1,5 +1,5 @@
 """
-app.py — FleetAudit Desktop GUI (Tkinter/ttk).
+app.py — TheWiseAudit Desktop GUI (Tkinter/ttk).
 
 Threading contract: the audit sweep runs in one daemon worker thread; the
 worker never touches widgets. It puts the AuditResult on a queue and the UI
@@ -48,10 +48,10 @@ FONT_MONO_SMALL = ("Consolas", 9)
 SEV_TAG = {"OK": "ok", "INFO": "info", "WARNING": "warn", "CRITICAL": "crit"}
 
 
-class FleetAuditApp(tk.Tk):
+class TheWiseAuditApp(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("FleetAudit — PC health & inventory")
+        self.title("TheWiseAudit — PC health & inventory")
         self.geometry("1000x700")
         self.minsize(840, 580)
         self.configure(bg=BG)
@@ -129,7 +129,7 @@ class FleetAuditApp(tk.Tk):
         header.pack(fill="x")
         left = ttk.Frame(header)
         left.pack(side="left")
-        ttk.Label(left, text="FleetAudit", foreground=FG,
+        ttk.Label(left, text="TheWiseAudit", foreground=FG,
                   font=FONT_DISPLAY).pack(anchor="w")
         ttk.Label(left, text="PC HEALTH & INVENTORY · FLEET SCANNER",
                   style="Faint.TLabel",
@@ -229,7 +229,7 @@ class FleetAuditApp(tk.Tk):
         self._footer = ttk.Label(
             self, padding=(16, 0, 16, 10), style="Faint.TLabel",
             font=("Segoe UI", 9),
-            text="FleetAudit v1.2 · Editorial Light · thresholds: "
+            text="TheWiseAudit v1.2 · Editorial Light · thresholds: "
                  + ", ".join(f"{k}={v}" for k, v
                              in fleet_core.THRESHOLDS.items()))
         self._footer.pack(fill="x")
@@ -360,7 +360,7 @@ class FleetAuditApp(tk.Tk):
             return
         path = filedialog.asksaveasfilename(
             defaultextension=".html",
-            initialfile="fleetaudit_report.html",
+            initialfile="thewiseaudit_report.html",
             filetypes=[("HTML report", "*.html")])
         if not path:
             return
@@ -374,7 +374,7 @@ class FleetAuditApp(tk.Tk):
             return
         path = filedialog.asksaveasfilename(
             defaultextension=".csv",
-            initialfile="fleetaudit_report.csv",
+            initialfile="thewiseaudit_report.csv",
             filetypes=[("CSV", "*.csv")])
         if not path:
             return
@@ -462,7 +462,7 @@ class FleetAuditApp(tk.Tk):
 
     def _export_history_csv(self) -> None:
         path = filedialog.asksaveasfilename(
-            defaultextension=".csv", initialfile="fleetaudit_history.csv",
+            defaultextension=".csv", initialfile="thewiseaudit_history.csv",
             filetypes=[("CSV", "*.csv")])
         if not path:
             return
@@ -476,7 +476,7 @@ class FleetAuditApp(tk.Tk):
 
 
 def main() -> int:
-    app = FleetAuditApp()
+    app = TheWiseAuditApp()
     if "--selftest" in sys.argv:
         app.start_scan()
         app._hosts_text.insert("1.0", "127.0.0.1\n192.0.2.123\n")

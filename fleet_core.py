@@ -1,5 +1,5 @@
 """
-fleet_core.py — data collection layer for FleetAudit Desktop.
+fleet_core.py — data collection layer for TheWiseAudit Desktop.
 
 Pure logic, no Tkinter imports: everything here is unit-testable and feeds
 the GUI via plain dicts. Collection functions never raise on individual
@@ -288,13 +288,13 @@ def to_html(res: AuditResult) -> str:
         for p in res.top_processes[:8])
 
     return f"""<!doctype html><html><head><meta charset='utf-8'>
-<title>FleetAudit — {esc(sysd.get('hostname', '?'))}</title>
+<title>TheWiseAudit — {esc(sysd.get('hostname', '?'))}</title>
 <style>body{{font-family:Segoe UI,system-ui,sans-serif;margin:32px;color:#212121}}
 h1{{font-size:1.4rem}} .meta{{color:#666;font-family:Consolas,monospace}}
 table{{border-collapse:collapse;margin:16px 0 28px;width:100%}}
 td,th{{border:1px solid #ddd;padding:6px 10px;font-size:13px;text-align:left}}
 th{{background:#f5f5f5}}</style></head><body>
-<h1>FleetAudit report — {esc(sysd.get('hostname', '?'))}</h1>
+<h1>TheWiseAudit report — {esc(sysd.get('hostname', '?'))}</h1>
 <p class='meta'>scanned {esc(res.scanned_at)} · worst severity:
 <b>{esc(res.worst_severity)}</b></p>
 <h2>Health findings</h2><table><tr><th>Check</th><th>Severity</th><th>Detail</th></tr>{rows}</table>

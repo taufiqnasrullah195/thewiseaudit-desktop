@@ -1,10 +1,10 @@
-"""build_exe.py — drive the PyInstaller build for FleetAudit.exe."""
+"""build_exe.py — drive the PyInstaller build for TheWiseAudit.exe."""
 import PyInstaller.__main__
 import sys
 
 PyInstaller.__main__.run([
     "app.py",
-    "--name=FleetAudit",
+    "--name=TheWiseAudit",
     "--onefile",
     "--windowed",              # no console window behind the GUI
     "--collect-submodules=psutil",

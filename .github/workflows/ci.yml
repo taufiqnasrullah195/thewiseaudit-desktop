@@ -40,5 +40,5 @@ jobs:
           python build_exe.py
       - uses: actions/upload-artifact@v4
         with:
-          name: FleetAudit-exe
+          name: TheWiseAudit-exe
           path: dist/FleetAudit.exe
