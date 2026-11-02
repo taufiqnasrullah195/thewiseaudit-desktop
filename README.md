@@ -1,5 +1,7 @@
 # TheWiseAudit Desktop
 
+![CI](https://github.com/taufiqnasrullah195/thewiseaudit-desktop/actions/workflows/ci.yml/badge.svg)
+
 ![UI](docs/screenshot.png)
 
 A desktop app for junior IT support work: one-click health audit and
