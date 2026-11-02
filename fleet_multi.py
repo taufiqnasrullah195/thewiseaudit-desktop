@@ -34,7 +34,6 @@ PROBE_PORTS: list[tuple[int, str]] = [
     (22, "SSH"),
 ]
 CONNECT_TIMEOUT_S = 0.6
-PING_TIMEOUT_FLAG = "/w" if sys.platform.startswith("win") else "-W"
 
 # Windows localizes ping output, so parse the *summary* lines instead:
 # English "Received = 3", German "Empfangen = 3", Indonesian "Diterima = 3".
@@ -76,9 +75,10 @@ def parse_hosts(text: str) -> list[str]:
 
 def ping_host(host: str) -> tuple[bool, int | None]:
     """System ping, locale-tolerant. Returns (reachable, latency_ms)."""
-    cmd = ["ping", "-n", "2", host]
     if sys.platform.startswith("win"):
         cmd = ["ping", "-n", "2", "-w", "1200", host]
+    else:
+        cmd = ["ping", "-c", "2", "-W", "1", host]
     try:
         out = subprocess.run(cmd, capture_output=True, text=True,
                              timeout=8, errors="replace").stdout
