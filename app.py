@@ -21,18 +21,29 @@ import fleet_core
 import fleet_multi
 from fleet_core import AuditResult
 
-COL_OK, COL_WARN, COL_CRIT, COL_INFO = "#4caf50", "#ff9800", "#ef5350", "#42a5f5"
+COL_OK = "#2E6E3E"   # deep green, readable on paper
+COL_WARN = "#A94F1C" # portfolio terracotta doubles as warning
+COL_CRIT = "#B3261E"
+COL_INFO = "#3B5B8C"
 
-# Dark palette — one source of truth for the whole UI.
-BG = "#16181d"          # window background
-BG_PANEL = "#1e2128"    # cards / tables
-BG_ROW_ALT = "#232732"  # zebra stripe
-BG_INPUT = "#262a33"
-FG = "#e8eaf0"          # primary text
-FG_SOFT = "#9aa3b2"     # secondary text
-FG_FAINT = "#6b7381"
-ACCENT = "#7c9cff"      # brand blue-violet
-LINE = "#2e3340"        # separators / borders
+# Portfolio design language: "Editorial Light" — paper background, white
+# surface cards with hairline borders, one terracotta accent, serif display,
+# mono for labels. Values mirror css/style.css :root of taufiq-portfolio.
+BG = "#F7F6F3"          # --paper
+BG_PANEL = "#FFFFFF"    # --surface
+BG_ROW_ALT = "#F2F1ED"  # zebra stripe on paper
+BG_INPUT = "#FFFFFF"
+FG = "#16171A"          # --ink
+FG_SOFT = "#33343A"     # --ink-soft
+FG_FAINT = "#67686D"    # --faint
+ACCENT = "#A94F1C"      # --accent terracotta
+ACCENT_SOFT = "#F0E2D8" # --accent-soft
+LINE = "#DAD8D3"        # --line
+
+FONT_DISPLAY = ("Georgia", 15, "bold")        # Fraunces stand-in
+FONT_SANS = ("Segoe UI", 10)                  # Archivo stand-in
+FONT_MONO = ("Consolas", 10)                  # IBM Plex Mono stand-in
+FONT_MONO_SMALL = ("Consolas", 9)
 SEV_TAG = {"OK": "ok", "INFO": "info", "WARNING": "warn", "CRITICAL": "crit"}
 
 
@@ -58,51 +69,58 @@ class FleetAuditApp(tk.Tk):
 
     def _build_style(self) -> None:
         style = ttk.Style(self)
-        style.theme_use("clam")  # fully themeable; vista is not
-        self.option_add("*Font", ("Segoe UI", 10))
+        style.theme_use("clam")  # fully themeable
+        self.option_add("*Font", FONT_SANS)
 
         style.configure(".", background=BG, foreground=FG,
                         bordercolor=LINE, troughcolor=BG_PANEL)
         style.configure("TFrame", background=BG)
-        style.configure("Panel.TFrame", background=BG_PANEL)
         style.configure("TLabel", background=BG, foreground=FG)
         style.configure("Soft.TLabel", background=BG, foreground=FG_SOFT)
-        style.configure("Faint.TLabel", background=BG, foreground=FG_FAINT)
-        style.configure("Status.TLabel", background=BG, foreground=FG_SOFT)
+        style.configure("Faint.TLabel", background=BG, foreground=FG_FAINT,
+                        font=FONT_MONO_SMALL)
+        style.configure("Status.TLabel", background=BG, foreground=FG_FAINT,
+                        font=FONT_MONO_SMALL)
 
-        # Flat accent buttons: filled primary, quiet secondary.
-        style.configure("TButton", background=BG_INPUT, foreground=FG,
-                        borderwidth=0, focusthickness=1,
+        # Buttons: quiet outline buttons, terracotta primary (accent fill
+        # with white text, like the site's terracotta links/underlines).
+        style.configure("TButton", background=BG_PANEL, foreground=FG,
+                        borderwidth=1, bordercolor=LINE, focusthickness=1,
                         focuscolor=ACCENT, padding=(14, 7))
         style.map("TButton",
-                  background=[("active", "#333845"),
-                              ("pressed", "#2c313c")])
-        style.configure("Scan.TButton", background=ACCENT, foreground="#0f1116",
-                        font=("Segoe UI", 10, "bold"), padding=(18, 7))
+                  background=[("active", "#EFEDE8"),
+                              ("pressed", "#E7E4DE")])
+        style.configure("Scan.TButton", background=ACCENT, foreground="#FFFFFF",
+                        borderwidth=0, font=("Segoe UI", 10, "bold"),
+                        padding=(18, 7))
         style.map("Scan.TButton",
-                  background=[("active", "#93adff"), ("pressed", "#6a89e8")])
+                  background=[("active", "#7E3A12"),  # --accent-deep
+                              ("pressed", "#7E3A12")])
 
-        # Notebook: dark tabs, accent underline on the active one.
-        style.configure("TNotebook", background=BG, borderwidth=0)
-        style.configure("TNotebook.Tab", background=BG_PANEL, foreground=FG_SOFT,
-                        padding=(16, 8), borderwidth=0, font=("Segoe UI", 10))
+        # Notebook: paper tabs, active tab gets the terracotta underline
+        # via a bottom border trick (expand) + ink text.
+        style.configure("TNotebook", background=BG, borderwidth=0,
+                        tabmargins=(0, 4, 0, 0))
+        style.configure("TNotebook.Tab", background=BG, foreground=FG_FAINT,
+                        padding=(16, 8), borderwidth=0, font=FONT_MONO_SMALL)
         style.map("TNotebook.Tab",
                   background=[("selected", BG_PANEL)],
-                  foreground=[("selected", FG)],
-                  expand=[("selected", (1, 1, 1, 0))])
+                  foreground=[("selected", ACCENT)],
+                  expand=[("selected", (1, 1, 1, 1))],
+                  bordercolor=[("selected", ACCENT)])
 
-        # Treeviews: dark body, zebra stripes, no borders.
+        # Treeviews: white surface cards, hairline borders, mono headings
+        # like the work-record tables on the site.
         style.configure("Treeview", background=BG_PANEL, foreground=FG,
                         fieldbackground=BG_PANEL, rowheight=26,
-                        borderwidth=0, bordercolor=LINE)
+                        borderwidth=1, bordercolor=LINE)
         style.configure("Treeview.Heading",
-                        background="#2a2f3a", foreground=FG_SOFT,
-                        borderwidth=0, padding=(8, 6),
-                        font=("Segoe UI", 9, "bold"))
+                        background="#EFEDE8", foreground=FG_FAINT,
+                        borderwidth=0, padding=(8, 6), font=FONT_MONO_SMALL)
         style.map("Treeview",
-                  background=[("selected", "#31405f")],
-                  foreground=[("selected", "#ffffff")])
-        style.map("Treeview.Heading", background=[("active", "#323848")])
+                  background=[("selected", ACCENT_SOFT)],
+                  foreground=[("selected", FG)])
+        style.map("Treeview.Heading", background=[("active", "#E7E4DE")])
 
     def _build_ui(self) -> None:
         # Header: wordmark + tagline + primary actions.
@@ -110,11 +128,11 @@ class FleetAuditApp(tk.Tk):
         header.pack(fill="x")
         left = ttk.Frame(header)
         left.pack(side="left")
-        ttk.Label(left, text="FleetAudit", foreground=ACCENT,
-                  font=("Segoe UI", 16, "bold")).pack(anchor="w")
-        ttk.Label(left, text="PC health & inventory · fleet scanner",
+        ttk.Label(left, text="FleetAudit", foreground=FG,
+                  font=FONT_DISPLAY).pack(anchor="w")
+        ttk.Label(left, text="PC HEALTH & INVENTORY · FLEET SCANNER",
                   style="Faint.TLabel",
-                  font=("Segoe UI", 9)).pack(anchor="w")
+                  font=("Consolas", 9)).pack(anchor="w")
         actions = ttk.Frame(header)
         actions.pack(side="right")
         self._status = tk.StringVar(
@@ -161,9 +179,10 @@ class FleetAuditApp(tk.Tk):
         ).pack(anchor="w")
         self._hosts_text = tk.Text(
             fleet_frame, height=6, width=70, undo=True,
-            font=("Consolas", 10), bg=BG_INPUT, fg=FG,
-            insertbackground=FG, relief="flat", padx=10, pady=8,
-            selectbackground="#31405f")
+            font=FONT_MONO, bg=BG_INPUT, fg=FG,
+            insertbackground=FG, relief="solid", bd=1,
+            highlightthickness=0, padx=10, pady=8,
+            selectbackground=ACCENT_SOFT)
         self._hosts_text.pack(fill="x", pady=(4, 8))
         btns = ttk.Frame(fleet_frame)
         btns.pack(fill="x")
@@ -190,7 +209,7 @@ class FleetAuditApp(tk.Tk):
         self._footer = ttk.Label(
             self, padding=(16, 0, 16, 10), style="Faint.TLabel",
             font=("Segoe UI", 9),
-            text="FleetAudit v1.1 · thresholds: "
+            text="FleetAudit v1.2 · Editorial Light · thresholds: "
                  + ", ".join(f"{k}={v}" for k, v
                              in fleet_core.THRESHOLDS.items()))
         self._footer.pack(fill="x")
